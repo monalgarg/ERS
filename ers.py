@@ -107,8 +107,9 @@ class ERS:
         self.cards_played = []
 
         pile_copy.reverse()
-        self.players[player_indx].append(pile_copy)
+        self.players[player_indx].extend(pile_copy)
 
+        print("\n")
         print("Player " + str(player_indx) + " will now play a card.")
         self.turn = player_indx # reset turn to who slapped/got the deck
 
@@ -173,8 +174,8 @@ class ERS:
             first_card = self.cards_played[0]
             second_card = self.cards_played[1]
             
-            if ((first_card.getNum() == "Q" and second_card.getNum() == "K") or 
-            (first_card.getNum() == "K" and second_card.getNum() == "Q")):
+            if ((first_card.getNum() == 12 and second_card.getNum() == 13) or 
+            (first_card.getNum() == 13 and second_card.getNum() == 12)):
                 return "Marriage !"
         return ""
                        
