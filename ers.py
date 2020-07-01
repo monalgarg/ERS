@@ -2,6 +2,7 @@ from random import shuffle
 import copy
 import sys,tty
 from Card import Card
+import time
 
 class ERS:
     def __init__(self, num_players):        
@@ -10,7 +11,7 @@ class ERS:
         self.players = [None] * self.num_players
         
         self.initalizeGame()
-        tty.setcbreak(sys.stdin)  
+        tty.setcbreak(sys.stdin) 
         
     def initalizeGame(self):   
         # initalize 52 card deck 
@@ -85,9 +86,12 @@ class ERS:
                         self.nextPlayerTurn()
                     else:
                         self.attempts_left -= 1
-                        if self.attempts_left == 0: # ran out of all tries
-                            print("Player " + str(self.face_card_holder_player_indx) + " gets the deck!")
-                            self.takePile(self.face_card_holder_player_indx)
+                        if self.attempts_left == 0: # ran out of all tries    
+                            is_valid_slap = self.buffer()
+
+                            # if not is_valid_slap:
+                            #     print("Player " + str(self.face_card_holder_player_indx) + " gets the deck!")
+                            #     self.takePile(self.face_card_holder_player_indx)
         else: # slap
             print("Player " + str(player_indx) + " slapped!")
 
@@ -99,6 +103,41 @@ class ERS:
                 print("Player " + str(player_indx) + " slapped incorrectly. Burn a card!")
                 self.burnCard(player_indx)
 
+    def buffer(self):
+        player_indx_first_slap = None
+        all_slappers = set()
+
+        slap_rules = self.checkSlaps()
+
+        t_end = time.time() + 3 # buffer of 3 seconds
+        while time.time() < t_end:
+            [player_indx, is_flip] = self.listen()
+            if player_indx is not None and not is_flip: # someone slapped
+                if player_indx_first_slap is None:
+                    player_indx_first_slap = player_indx # record the first player who slapped
+
+                    if player_indx == self.face_card_holder_player_indx and not slap_rules: # just taking the deck
+                        print("Player " + str(player_indx) + " gets the deck!")
+                        self.takePile(player_indx) # give the pile to player_indx
+                        return
+
+                print("Player " + str(player_indx) + " slapped!")
+                all_slappers.add(player_indx)
+
+        if slap_rules: # valid slap
+            print(slap_rules)
+            print("Player " + str(player_indx_first_slap) + " slapped first and gets the deck.")
+            self.takePile(player_indx_first_slap) # give the pile to player_indx
+            return True
+        else:
+            for i in all_slappers:
+                if i != self.face_card_holder_player_indx:
+                    print("Player " + str(i) + " slapped incorrectly. Burn a card!")
+                    self.burnCard(i)
+            print("Player " + str(self.face_card_holder_player_indx) + " gets the deck!")
+            self.takePile(self.face_card_holder_player_indx) # give the pile to face_card_holder_player_indx
+            return True
+
     def nextPlayerTurn(self):
         self.turn = (self.turn + 1) % self.num_players
 
@@ -109,7 +148,7 @@ class ERS:
         pile_copy.reverse()
         self.players[player_indx].extend(pile_copy)
 
-        print("\n")
+        print("")
         print("Player " + str(player_indx) + " will now play a card.")
         self.turn = player_indx # reset turn to who slapped/got the deck
 
@@ -127,6 +166,7 @@ class ERS:
         return 4 if num == 1 else num - 10
 
     # returns player name and whether or not it is a flip (true) or slap (false)
+    # blocking listen for keystroke
     def listen(self):
         key = ord(sys.stdin.read(1))
         
@@ -147,6 +187,7 @@ class ERS:
         slap_rules += self.checkMarriage()
         slap_rules += self.checkTopAndBottom()
         slap_rules += self.checkAddToTen()
+        slap_rules += self.addingRule()
 
         return slap_rules
         
@@ -197,6 +238,22 @@ class ERS:
                 return "Add to Ten! " 
         return ""
             
+    def addingRule(self):
+        if len(self.cards_played) >= 3:
+            first_card_num = self.cards_played[0].getNum()
+            second_card_num = self.cards_played[1].getNum()
+            third_card_num = self.cards_played[2].getNum()
+
+            if (first_card_num + second_card_num == third_card_num or
+                first_card_num + third_card_num == second_card_num or
+                second_card_num + third_card_num == first_card_num):
+                return "Adding rule! "
+            if (first_card_num == 1 and second_card_num + third_card_num == 14 or
+                second_card_num == 1 and first_card_num + third_card_num == 14 or 
+                third_card_num == 1 and first_card_num + second_card_num == 14):
+                return "Adding rule! "
+        return ""
+
     def isGameFinished(self):
         for i, player_deck in enumerate(self.players):
             if len(player_deck) == 52:
