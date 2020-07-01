@@ -52,6 +52,9 @@ class ERS:
     def play(self):
         self.turn = 0
         print("Player 0 starts")
+
+        self.face_card_holder_player_indx = None
+        self.attempts_left = None
         
         while (not self.isGameFinished()):
             player_indx = None
@@ -61,7 +64,7 @@ class ERS:
             self.resolveAction(player_indx, is_flip)
 
     def resolveAction(self, player_indx, is_flip):
-        if is_flip:
+        if is_flip: #flip
             if player_indx != self.turn: # someone played out of turn
                 print("Player " + str(player_indx) + " played out of turn. Burn a card!")
                 self.burnCard(player_indx)
@@ -70,8 +73,21 @@ class ERS:
                 self.cards_played.insert(0, card_played)
 
                 print(card_played.getCardName())
-                
-                self.turn = (self.turn + 1) % self.num_players # next players turn
+
+                # face card stuff
+                if card_played.isFaceCard(): 
+                    self.face_card_holder_player_indx = player_indx
+                    self.attempts_left = self.numTriesForFaceCard(card_played)
+
+                    self.nextPlayerTurn()
+                else:
+                    if self.face_card_holder_player_indx is None:
+                        self.nextPlayerTurn()
+                    else:
+                        self.attempts_left -= 1
+                        if self.attempts_left == 0: # ran out of all tries
+                            print("Player " + str(self.face_card_holder_player_indx) + " gets the deck!")
+                            self.takePile(self.face_card_holder_player_indx)
         else: # slap
             print("Player " + str(player_indx) + " slapped!")
 
@@ -79,12 +95,12 @@ class ERS:
             if slap_rules: # valid slap
                 print(slap_rules)
                 self.takePile(player_indx) # give the pile to player_indx
-
-                print("Player " + str(player_indx) + " will now play a card.")
-                self.turn = player_indx # reset turn to who slapped
             else: # invalid slap
                 print("Player " + str(player_indx) + " slapped incorrectly. Burn a card!")
                 self.burnCard(player_indx)
+
+    def nextPlayerTurn(self):
+        self.turn = (self.turn + 1) % self.num_players
 
     def takePile(self, player_indx):
         pile_copy = copy.deepcopy(self.cards_played)
@@ -93,11 +109,21 @@ class ERS:
         pile_copy.reverse()
         self.players[player_indx].append(pile_copy)
 
+        print("Player " + str(player_indx) + " will now play a card.")
+        self.turn = player_indx # reset turn to who slapped/got the deck
+
+        self.face_card_holder_player_indx = None
+        self.attempts_left = None
+
     def burnCard(self, player_indx):
         card_played = self.players[player_indx].pop(0)
         self.cards_played.append(card_played) # adds to end
 
-        print(card_played.getCardName())
+        print("Burned " + card_played.getCardName())
+
+    def numTriesForFaceCard(self, card):
+        num = card.getNum()
+        return 4 if num == 1 else num - 10
 
     # returns player name and whether or not it is a flip (true) or slap (false)
     def listen(self):
@@ -147,8 +173,8 @@ class ERS:
             first_card = self.cards_played[0]
             second_card = self.cards_played[1]
             
-            if ((first_card.getNum() == "Queen" and second_card.getNum() == "King") or 
-            (first_card.getNum() == "King" and second_card.getNum() == "Queen")):
+            if ((first_card.getNum() == "Q" and second_card.getNum() == "K") or 
+            (first_card.getNum() == "K" and second_card.getNum() == "Q")):
                 return "Marriage !"
         return ""
                        
