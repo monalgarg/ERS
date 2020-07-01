@@ -1,66 +1,8 @@
 from random import shuffle
 import copy
 import sys,tty
+from Card import Card
 
-
-class Card:
-    def __init__(self, suit, num):
-        self.suit = suit
-        self.num = num
-    
-    def getSuit(self):
-        return self.suit
-
-    def getNum(self):
-        return self.num
-    
-    def getSuitName(self):
-        if self.suit == 0:
-            return "Heart"
-        elif self.suit == 1:
-            return "Diamond"
-        elif self.suit == 2:
-            return "Spades"
-        elif self.suit == 3:
-            return "Clubs" 
-        else:
-            return "Undefined" 
-    
-    def getNumName(self):
-        if self.num >= 2 and self.num <= 10:
-            return str(self.num)
-        elif self.num == 1:
-            return "Ace"
-        elif self.num == 11:
-            return "Jack"
-        elif self.num == 12:
-            return "Queen"
-        elif self.num == 13:
-            return "King"
-        else:
-            return "Undefined"
-        
-    def getCardName(self):
-        return self.getNumName() + " of " + self.getSuitName()
-
-class Deck:
-    def __init__(self):
-        self.deck = []
-        for i in range(4):
-            for j in range(1, 14):
-                c = Card(i, j)
-                self.deck.append(c) 
-                
-    def shuffleDeck(self):
-        shuffle(self.deck) 
-        
-    def printDeck(self):
-        for i in self.deck:
-            print(i.getCardName())  
-            
-    def getList(self):
-        return self.deck     
-    
 class ERS:
     def __init__(self, num_players):        
         self.num_players = num_players
@@ -116,16 +58,46 @@ class ERS:
             while player_indx is None: 
                 [player_indx, is_flip] = self.listen()
             
-            print(str(player_indx) + " " + str(is_flip))
-            # flip card and other stuff
-            self.turn = (self.turn + 1) % self.num_players
-            
-        # while(not input("") and len(self.deck.getList()) != 0):
-        #     c = self.deck.getList().pop() # and add to whatever list you are growing
-        #     self.cards_played.insert(0, c)
-        #     print(c.getCardName())
+            self.resolveAction(player_indx, is_flip)
 
-        #     self.checkSlaps()
+    def resolveAction(self, player_indx, is_flip):
+        if is_flip:
+            if player_indx != self.turn: # someone played out of turn
+                print("Player " + str(player_indx) + " played out of turn. Burn a card!")
+                self.burnCard(player_indx)
+            else: # regular flip
+                card_played = self.players[player_indx].pop(0)
+                self.cards_played.insert(0, card_played)
+
+                print(card_played.getCardName())
+                
+                self.turn = (self.turn + 1) % self.num_players # next players turn
+        else: # slap
+            print("Player " + str(player_indx) + " slapped!")
+
+            slap_rules = self.checkSlaps()
+            if slap_rules: # valid slap
+                print(slap_rules)
+                self.takePile(player_indx) # give the pile to player_indx
+
+                print("Player " + str(player_indx) + " will now play a card.")
+                self.turn = player_indx # reset turn to who slapped
+            else: # invalid slap
+                print("Player " + str(player_indx) + " slapped incorrectly. Burn a card!")
+                self.burnCard(player_indx)
+
+    def takePile(self, player_indx):
+        pile_copy = copy.deepcopy(self.cards_played)
+        self.cards_played = []
+
+        pile_copy.reverse()
+        self.players[player_indx].append(pile_copy)
+
+    def burnCard(self, player_indx):
+        card_played = self.players[player_indx].pop(0)
+        self.cards_played.append(card_played) # adds to end
+
+        print(card_played.getCardName())
 
     # returns player name and whether or not it is a flip (true) or slap (false)
     def listen(self):
@@ -138,12 +110,18 @@ class ERS:
         else: 
             return None, None
                 
+    # ************ SLAP RULES ************
+
     def checkSlaps(self):
-        self.checkDouble()
-        self.checkSandwich()
-        self.checkMarriage()
-        self.checkTopAndBottom()
-        self.checkAddToTen()
+        slap_rules = ""
+
+        slap_rules += self.checkDouble()
+        slap_rules += self.checkSandwich()
+        slap_rules += self.checkMarriage()
+        slap_rules += self.checkTopAndBottom()
+        slap_rules += self.checkAddToTen()
+
+        return slap_rules
         
     def checkDouble(self):
         if len(self.cards_played) >= 2:
@@ -151,8 +129,8 @@ class ERS:
             second_card = self.cards_played[1]
         
             if first_card.getNum() == second_card.getNum():
-                print("Double!")
-                return True
+                return "Double! "
+        return ""
         
     def checkSandwich(self):
         if len(self.cards_played) >= 3:
@@ -161,17 +139,18 @@ class ERS:
             third_card = self.cards_played[2]
         
             if first_card.getNum() == third_card.getNum():
-                print("Sandwich!")
-                return True  
+                return "Sandwich! "
+        return ""
               
     def checkMarriage(self):
         if len(self.cards_played) >= 2:
             first_card = self.cards_played[0]
             second_card = self.cards_played[1]
             
-            if (first_card.getNum() == "Queen" and second_card.getNum() == "King") or (first_card.getNum() == "King" and second_card.getNum() == "Queen"):
-                print("Marriage!")
-                return True
+            if ((first_card.getNum() == "Queen" and second_card.getNum() == "King") or 
+            (first_card.getNum() == "King" and second_card.getNum() == "Queen")):
+                return "Marriage !"
+        return ""
                        
     def checkTopAndBottom(self):
         if len(self.cards_played) >= 3:
@@ -179,8 +158,8 @@ class ERS:
             top_card = self.cards_played[0]   
             
             if (bottom_card.getNum() == top_card.getNum()):
-                print("Top and Bottom!") 
-                return True
+                return "Top and Bottom! "   
+        return ""
     
     def checkAddToTen(self):
         if len(self.cards_played) >= 2:
@@ -188,8 +167,8 @@ class ERS:
             second_card = self.cards_played[1]
             
             if first_card.getNum() + second_card.getNum() == 10:
-                print("Add to Ten!")
-                return True
+                return "Add to Ten! " 
+        return ""
             
     def isGameFinished(self):
         for i, player_deck in enumerate(self.players):
@@ -200,17 +179,3 @@ class ERS:
 
 game = ERS(2)
 game.play()
-# for i, deck in enumerate(game.players):
-#     print("PLAYER " + str(i) + " size of deck: " + str(len(deck)))
-#     for j in deck:
-#         print(j.getCardName())
-#     print('\n')
-    
-# tty.setcbreak(sys.stdin)  
-# key = ord(sys.stdin.read(1))  # key captures the key-code 
-# # based on the input we do something - in this case print something
-# if key==97:
-#     print("you pressed a")
-# else:
-#     print("you pressed something else ...")
-# sys.exit(0)
