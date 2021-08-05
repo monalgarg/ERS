@@ -64,6 +64,21 @@ class ERS:
             
             self.resolveAction(player_indx, is_flip)
 
+    def isGameFinished(self):
+        last_one_standing = None
+        for i, player_deck in enumerate(self.players):
+            if len(player_deck) > 0:
+                if last_one_standing != None:
+                    return False
+                else:
+                    last_one_standing = i
+
+        if last_one_standing != None:
+            print("Player " + str(last_one_standing) + " is the winner!")
+            return True
+        else:
+            return False
+            
     def resolveAction(self, player_indx, is_flip):
         if is_flip: #flip
             if player_indx != self.turn: # someone played out of turn
@@ -253,13 +268,6 @@ class ERS:
                 third_card_num == 1 and first_card_num + second_card_num == 14):
                 return "Adding rule! "
         return ""
-
-    def isGameFinished(self):
-        for i, player_deck in enumerate(self.players):
-            if len(player_deck) == 52:
-                print("Player " + str(i) + " is the winner!")
-                return True
-        return False
 
 game = ERS(2)
 game.play()
