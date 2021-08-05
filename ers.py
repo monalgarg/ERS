@@ -78,7 +78,7 @@ class ERS:
             return True
         else:
             return False
-            
+
     def resolveAction(self, player_indx, is_flip):
         if is_flip: #flip
             if player_indx != self.turn: # someone played out of turn
@@ -108,6 +108,9 @@ class ERS:
                             #     print("Player " + str(self.face_card_holder_player_indx) + " gets the deck!")
                             #     self.takePile(self.face_card_holder_player_indx)
         else: # slap
+
+            # TODO: add some buffer period because right now, when 2 people slap together, first
+            # automatically wins the deck and other burns a card
             print("Player " + str(player_indx) + " slapped!")
 
             slap_rules = self.checkSlaps()
